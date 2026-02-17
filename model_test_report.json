@@ -1,0 +1,40 @@
+{
+  "timestamp": "2026-02-17T00:25:18.168484",
+  "system_info": {
+    "platform": "arm64",
+    "memory_gb": 32
+  },
+  "ollama_installed": true,
+  "ollama_models": [
+    "qwen2.5:3b",
+    "qwen2.5:1.5b",
+    "qwen2.5:14b",
+    "qwen2.5:7b"
+  ],
+  "tests": {
+    "llm": {
+      "model_id": "qwen2.5-14b-instruct",
+      "model_name": "Qwen2.5 14B Instruct",
+      "success": true,
+      "response_time_ms": 29958.65,
+      "response": "我是阿里云开发的大规模语言模型通义千问，可以生成各种类型的文本，并能够与用户进行多轮的对话交互。如果您只需要我介绍自己，可以说：我是一个大型语言模型，能够回答问题、创作文字，如写故事、写公文、写邮件、写剧本等等，还能表达观点，玩游戏等。您可以问我任何问题，我会尽力给出满意的答复。",
+      "error": null
+    },
+    "embedding": {
+      "model_id": "gte-qwen2-7b-instruct",
+      "model_name": "GTE-Qwen2-7B-Instruct",
+      "success": false,
+      "embedding_dim": 0,
+      "response_time_ms": 0,
+      "error": "[Errno 32] Broken pipe"
+    },
+    "tts": {
+      "model_id": "qwen3-tts-1.7b",
+      "model_name": "Qwen3-TTS 1.7B",
+      "success": false,
+      "response_time_ms": 0,
+      "audio_length_sec": 0,
+      "error": "'QwenTTSService' object has no attribute 'synthesize'"
+    }
+  }
+}
