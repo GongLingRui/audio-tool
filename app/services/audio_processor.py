@@ -8,12 +8,25 @@ from pathlib import Path
 from typing import Any, Optional, List, Dict, Tuple
 
 import ffmpeg
-from pydub import AudioSegment
-from pydub.effects import normalize
-from pydub.silence import detect_nonsilent
+try:
+    # NOTE: pydub depends on `audioop` (removed in Python 3.13). Import lazily and degrade gracefully.
+    from pydub import AudioSegment  # type: ignore
+    from pydub.effects import normalize  # type: ignore
+    from pydub.silence import detect_nonsilent  # type: ignore
+
+    _PYDUB_AVAILABLE = True
+    _PYDUB_IMPORT_ERROR: Exception | None = None
+except Exception as e:  # pragma: no cover - environment dependent
+    AudioSegment = Any  # type: ignore
+    normalize = None  # type: ignore
+    detect_nonsilent = None  # type: ignore
+    _PYDUB_AVAILABLE = False
+    _PYDUB_IMPORT_ERROR = e
 import numpy as np
 
 from app.config import settings
+from app.utils.audio_decode import ffmpeg_available, iter_audio_mono_float32, probe_audio
+from app.utils.wav_audio import analyze_wav_loudness, read_wav_info
 
 
 logger = logging.getLogger(__name__)
@@ -73,9 +86,18 @@ class AudioProcessor:
 
     async def get_duration(self, audio_path: str) -> float:
         """Get audio duration in seconds."""
+        # Prefer pydub when available (supports many formats via ffmpeg),
+        # but fall back to stdlib WAV parsing when pydub/ffmpeg isn't available.
+        if _PYDUB_AVAILABLE:
+            try:
+                audio = AudioSegment.from_file(audio_path)
+                return len(audio) / 1000.0
+            except Exception:
+                pass
+
         try:
-            audio = AudioSegment.from_file(audio_path)
-            return len(audio) / 1000.0
+            info = read_wav_info(audio_path)
+            return info.duration
         except Exception:
             return 0.0
 
@@ -267,18 +289,106 @@ class AudioProcessor:
 
     async def get_audio_info(self, file_path: str) -> dict[str, Any]:
         """Get audio file information."""
+        if _PYDUB_AVAILABLE:
+            try:
+                audio = AudioSegment.from_file(file_path)
+                return {
+                    "duration": len(audio) / 1000.0,
+                    "channels": audio.channels,
+                    "sample_rate": audio.frame_rate,
+                    "sample_width": audio.sample_width,
+                    "frame_width": audio.frame_width,
+                    "frame_count": audio.frame_count(),
+                }
+            except Exception:
+                # Fall back to WAV parsing below.
+                pass
+
+        if ffmpeg_available():
+            try:
+                info = probe_audio(file_path)
+                return {
+                    "duration": info.duration,
+                    "channels": info.channels,
+                    "sample_rate": info.sample_rate,
+                }
+            except Exception:
+                pass
+
         try:
-            audio = AudioSegment.from_file(file_path)
+            info = read_wav_info(file_path)
             return {
-                "duration": len(audio) / 1000.0,
-                "channels": audio.channels,
-                "sample_rate": audio.frame_rate,
-                "sample_width": audio.sample_width,
-                "frame_width": audio.frame_width,
-                "frame_count": audio.frame_count(),
+                "duration": info.duration,
+                "channels": info.channels,
+                "sample_rate": info.sample_rate,
+                "sample_width": info.sample_width,
+                "frame_width": info.sample_width * info.channels,
+                "frame_count": info.frame_count,
             }
         except Exception as e:
             return {"error": str(e)}
+
+    async def analyze_loudness(self, file_path: str) -> dict[str, Any]:
+        """Analyze loudness and dynamics (best-effort).
+
+        This is used by AudioQualityChecker. It must not crash even when optional
+        deps (ffmpeg/pydub/audioop) are unavailable.
+        """
+        # Try pydub first (if available)
+        if _PYDUB_AVAILABLE:
+            try:
+                audio = AudioSegment.from_file(file_path)
+                # Approximate metrics from AudioSegment.
+                peak_amp = float(10 ** (audio.max_dBFS / 20.0)) if audio.max_dBFS != float("-inf") else 0.0
+                rms_amp = float(10 ** (audio.dBFS / 20.0)) if audio.dBFS != float("-inf") else 0.0
+                peak_db = float(audio.max_dBFS) if audio.max_dBFS != float("-inf") else -120.0
+                rms_db = float(audio.dBFS) if audio.dBFS != float("-inf") else -120.0
+                dynamic_range_db = max(0.0, peak_db - rms_db)
+                return {
+                    "peak_db": peak_db,
+                    "rms_db": rms_db,
+                    "dynamic_range_db": dynamic_range_db,
+                    "peak_amp": peak_amp,
+                    "rms_amp": rms_amp,
+                    "method": "pydub",
+                }
+            except Exception:
+                pass
+
+        # ffmpeg streaming decode fallback (supports mp3/flac/m4a/...).
+        if ffmpeg_available():
+            try:
+                peak = 0.0
+                sumsq = 0.0
+                count = 0
+                for block in iter_audio_mono_float32(file_path, sample_rate=16000, chunk_samples=8192):
+                    if block.size == 0:
+                        continue
+                    abs_block = np.abs(block)
+                    peak = max(peak, float(abs_block.max(initial=0.0)))
+                    sumsq += float(np.square(block).sum())
+                    count += int(block.size)
+
+                rms = float(np.sqrt(sumsq / count)) if count else 0.0
+                # Convert to dBFS. (float32 samples already normalized)
+                peak_db = float(20.0 * np.log10(max(1e-12, min(1.0, peak)))) if peak > 0 else -120.0
+                rms_db = float(20.0 * np.log10(max(1e-12, min(1.0, rms)))) if rms > 0 else -120.0
+                return {
+                    "peak_db": peak_db,
+                    "rms_db": rms_db,
+                    "dynamic_range_db": max(0.0, peak_db - rms_db),
+                    "method": "ffmpeg",
+                }
+            except Exception as e:
+                return {"error": str(e), "method": "ffmpeg"}
+
+        # WAV fallback
+        try:
+            metrics = analyze_wav_loudness(file_path)
+            metrics["method"] = "wave"
+            return metrics
+        except Exception as e:
+            return {"error": str(e), "method": "unavailable"}
 
     async def export_audacity_project(
         self,

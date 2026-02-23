@@ -1,4 +1,4 @@
-"""Project schemas."""
+"""Project schemas - Refactored for general audio content creation."""
 from datetime import datetime
 
 from pydantic import BaseModel, Field
@@ -18,12 +18,22 @@ class ProjectBase(BaseModel):
 
     name: str = Field(..., min_length=1, max_length=255)
     description: str | None = None
+    project_type: str = Field(
+        "custom",
+        pattern="^(podcast|voiceover|advertisement|audiobook|custom)$",
+    )
+    source_type: str | None = Field(
+        None,
+        pattern="^(text|file|transcript|script)$",
+    )
+    source_content: str | None = None
+    source_file_path: str | None = None
+    metadata: dict = Field(default_factory=dict)
 
 
 class ProjectCreate(ProjectBase):
     """Project creation schema."""
 
-    book_id: str
     config: ProjectConfig | None = None
 
 
@@ -32,19 +42,26 @@ class ProjectUpdate(BaseModel):
 
     name: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
+    project_type: str | None = Field(
+        None,
+        pattern="^(podcast|voiceover|advertisement|audiobook|custom)$",
+    )
+    status: str | None = None
     config: ProjectConfig | None = None
+    metadata: dict | None = None
 
 
 class Project(ProjectBase):
     """Project response schema."""
 
     id: str
-    book_id: str
-    book_title: str | None = None
+    user_id: str
     status: str
     config: ProjectConfig
     audio_path: str | None
     duration: float | None
+    total_duration: float | None
+    metadata: dict
     created_at: datetime
     updated_at: datetime
     progress: "ProjectProgress | None" = None

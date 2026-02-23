@@ -202,7 +202,6 @@ async def generate_script_task(project_id: str):
 @router.get("/{project_id}/scripts/status", response_model=ApiResponse[ScriptStatusResponse])
 async def get_script_status(
     project_id: str,
-    current_user: CurrentUserDep,
     db: DbDep,
 ):
     """Get script generation status."""

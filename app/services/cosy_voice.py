@@ -14,7 +14,16 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 import numpy as np
-from pydub import AudioSegment
+try:
+    # NOTE: pydub depends on `audioop` (removed in Python 3.13). Import lazily and degrade gracefully.
+    from pydub import AudioSegment  # type: ignore
+
+    _PYDUB_AVAILABLE = True
+    _PYDUB_IMPORT_ERROR: Exception | None = None
+except Exception as e:  # pragma: no cover - environment dependent
+    AudioSegment = Any  # type: ignore
+    _PYDUB_AVAILABLE = False
+    _PYDUB_IMPORT_ERROR = e
 
 from app.config import settings
 from app.core.exceptions import TTSError

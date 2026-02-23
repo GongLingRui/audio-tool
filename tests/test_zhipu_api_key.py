@@ -2,13 +2,18 @@
 Test Zhipu AI API with different authentication methods
 """
 import asyncio
+import os
 import httpx
+import pytest
 
 
 async def test_with_api_key():
     """Test using API key directly."""
 
-    api_key = "your-zhipu-api-key-here"  # 替换为真实 API Key
+    api_key = os.getenv("ZHIPU_API_KEY")
+    if not api_key:
+        pytest.skip("ZHIPU_API_KEY not set; skipping external integration test")
+
     base_url = "https://open.bigmodel.cn/api/paas/v4"
 
     messages = [

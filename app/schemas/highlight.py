@@ -1,41 +1,30 @@
-"""Highlight and note schemas."""
-from datetime import datetime
-from typing import Literal
-
+"""Highlight and Note schemas."""
 from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import datetime
 
 
 class HighlightBase(BaseModel):
     """Base highlight schema."""
 
-    text: str
-    color: Literal["yellow", "green", "blue", "pink"]
-    start_offset: int = Field(..., ge=0)
-    end_offset: int = Field(..., ge=0)
-    chapter: str | None = None
+    text: str = Field(..., description="Highlighted text")
+    color: str = Field(default="yellow", description="Highlight color")
+    note: Optional[str] = Field(None, description="Optional note")
 
 
 class HighlightCreate(HighlightBase):
-    """Highlight creation schema."""
+    """Schema for creating a highlight."""
 
-    chunk_id: str | None = None
-    note: str | None = None
-
-
-class HighlightUpdate(BaseModel):
-    """Highlight update schema."""
-
-    color: Literal["yellow", "green", "blue", "pink"] | None = None
+    chapter_id: str = Field(..., description="Chapter ID")
+    position: float = Field(..., description="Position in chapter")
 
 
 class Highlight(HighlightBase):
-    """Highlight response schema."""
+    """Complete highlight schema."""
 
     id: str
-    user_id: str
-    book_id: str
-    chunk_id: str | None
-    note: "Note | None" = None
+    chapter_id: str
+    position: float
     created_at: datetime
 
     class Config:
@@ -45,32 +34,30 @@ class Highlight(HighlightBase):
 class NoteBase(BaseModel):
     """Base note schema."""
 
-    content: str = Field(..., min_length=1)
+    content: str = Field(..., description="Note content")
+    timestamp: Optional[float] = Field(None, description="Audio timestamp")
 
 
 class NoteCreate(NoteBase):
-    """Note creation schema."""
+    """Schema for creating a note."""
 
-    pass
+    chunk_id: str = Field(..., description="Associated chunk ID")
 
 
-class NoteUpdate(NoteBase):
-    """Note update schema."""
+class NoteUpdate(BaseModel):
+    """Schema for updating a note."""
 
-    pass
+    content: Optional[str] = None
+    timestamp: Optional[float] = None
 
 
 class Note(NoteBase):
-    """Note response schema."""
+    """Complete note schema."""
 
     id: str
-    highlight_id: str
+    chunk_id: str
     created_at: datetime
     updated_at: datetime
 
     class Config:
         from_attributes = True
-
-
-# Update forward reference
-Highlight.model_rebuild()

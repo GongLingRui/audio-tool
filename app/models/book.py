@@ -1,9 +1,10 @@
 """Book model."""
+
 import uuid
 from datetime import datetime
 
 from sqlalchemy import Float, ForeignKey, Index, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
 
@@ -24,29 +25,27 @@ class Book(Base):
         nullable=False,
         index=True,
     )
-    title: Mapped[str] = mapped_column(String(500), nullable=False)
+
+    title: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     author: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     cover_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    file_path: Mapped[str] = mapped_column(String(500), nullable=False)
-    file_type: Mapped[str] = mapped_column(String(20), nullable=False)  # txt, pdf, epub
-    total_pages: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    total_chars: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    progress: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, nullable=False, index=True)
+
+    total_chapters: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    audio_duration: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="draft", nullable=False, index=True)
+
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         default=datetime.utcnow,
         onupdate=datetime.utcnow,
         nullable=False,
     )
 
-    # Relationships
-    projects = relationship("Project", back_populates="book", cascade="all, delete-orphan")
-    highlights = relationship("Highlight", back_populates="book", cascade="all, delete-orphan")
-
-    # Composite indexes for better query performance
     __table_args__ = (
-        Index('ix_book_user_created', 'user_id', 'created_at'),
+        Index("ix_books_user_status", "user_id", "status"),
     )
 
     def __repr__(self) -> str:
         return f"<Book {self.title}>"
+

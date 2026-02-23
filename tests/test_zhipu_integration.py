@@ -2,8 +2,10 @@
 Test Zhipu AI GLM-4-Flash integration
 """
 import asyncio
+import os
 import sys
 from pathlib import Path
+import pytest
 
 # Add backend to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -14,6 +16,8 @@ from app.config import settings
 
 async def test_zhipu_generation():
     """Test script generation with Zhipu AI GLM-4-Flash."""
+    if os.getenv("RUN_ZHIPU_TESTS") != "1":
+        pytest.skip("RUN_ZHIPU_TESTS!=1; skipping external integration test")
 
     print("=" * 60)
     print("Zhipu AI GLM-4-Flash Integration Test")

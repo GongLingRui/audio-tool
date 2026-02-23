@@ -2,15 +2,20 @@
 Direct test of Zhipu AI API
 """
 import asyncio
+import os
 import httpx
 import jwt
+import pytest
 import time
 
 
 async def test_zhipu_direct():
     """Test Zhipu AI API directly."""
 
-    api_key = "your-zhipu-api-key-here"  # 替换为真实 API Key
+    api_key = os.getenv("ZHIPU_API_KEY")
+    if not api_key or "." not in api_key:
+        pytest.skip("ZHIPU_API_KEY not set; skipping external integration test")
+
     base_url = "https://open.bigmodel.cn/api/paas/v4"
 
     # Parse API key

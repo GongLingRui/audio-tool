@@ -1,41 +1,41 @@
 """Book schemas."""
-from datetime import datetime
-
 from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import datetime
 
 
 class BookBase(BaseModel):
     """Base book schema."""
 
-    title: str = Field(..., min_length=1, max_length=500)
-    author: str | None = Field(None, max_length=255)
+    title: str = Field(..., description="Book title")
+    author: Optional[str] = Field(None, description="Book author")
+    description: Optional[str] = Field(None, description="Book description")
+    cover_url: Optional[str] = Field(None, description="Cover image URL")
 
 
 class BookCreate(BookBase):
-    """Book creation schema."""
+    """Schema for creating a book."""
 
-    pass
+    user_id: str = Field(..., description="User ID who owns the book")
 
 
 class BookUpdate(BaseModel):
-    """Book update schema."""
+    """Schema for updating a book."""
 
-    title: str | None = Field(None, min_length=1, max_length=500)
-    author: str | None = Field(None, max_length=255)
-    cover_url: str | None = None
-    progress: float | None = Field(None, ge=0, le=1)
+    title: Optional[str] = None
+    author: Optional[str] = None
+    description: Optional[str] = None
+    cover_url: Optional[str] = None
 
 
 class Book(BookBase):
-    """Book response schema."""
+    """Complete book schema."""
 
     id: str
     user_id: str
-    cover_url: str | None
-    file_type: str
-    total_pages: int | None
-    total_chars: int | None
-    progress: float
+    total_chapters: int = 0
+    audio_duration: float = 0
+    status: str = "draft"
     created_at: datetime
     updated_at: datetime
 
@@ -44,19 +44,9 @@ class Book(BookBase):
 
 
 class BookUploadResponse(BaseModel):
-    """Book upload response schema."""
+    """Response schema for book upload."""
 
-    id: str
-    title: str
-    author: str | None
-    file_type: str
-    total_chars: int | None
-    status: str = "processing"
-
-
-class BookContentResponse(BaseModel):
-    """Book content response schema."""
-
-    content: str
-    chapters: list[dict] = []
-    metadata: dict
+    book_id: str
+    filename: str
+    chapters_extracted: int
+    message: str

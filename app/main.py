@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api import api_router
+from app.api.hub import create_hub_router
 from app.config import settings
 from app.database import init_db
 
@@ -48,7 +48,11 @@ def create_app() -> FastAPI:
     )
 
     # Include API routes
-    app.include_router(api_router)
+    if settings.app_mode.lower() == "hub":
+        app.include_router(create_hub_router())
+    else:
+        from app.api import api_router
+        app.include_router(api_router)
 
     # Mount static files
     static_dir = settings.upload_dir.parent

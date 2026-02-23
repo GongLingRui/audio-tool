@@ -22,7 +22,8 @@ class Settings(BaseSettings):
     app_name: str = "Read-Rhyme"
     app_version: str = "0.1.0"
     debug: bool = False
-    secret_key: str = "your-secret-key-here"
+    secret_key: str = ""
+    app_mode: str = "hub"  # hub or full
 
     # Server
     host: str = "0.0.0.0"
@@ -35,9 +36,11 @@ class Settings(BaseSettings):
     cors_origins: List[str] = [
         "http://localhost:5173",
         "http://localhost:5174",
+        "http://localhost:8080",
         "http://localhost:3000",
         "http://127.0.0.1:5173",
         "http://127.0.0.1:5174",
+        "http://127.0.0.1:8080",
         "http://127.0.0.1:3000",
     ]
 
@@ -60,7 +63,7 @@ class Settings(BaseSettings):
     llm_model: str = "qwen3-14b"
 
     # JWT
-    jwt_secret_key: str = "your-jwt-secret-key"
+    jwt_secret_key: str = ""
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 1440  # 24 hours
 

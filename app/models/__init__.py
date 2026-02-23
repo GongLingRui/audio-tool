@@ -1,8 +1,7 @@
 """Database models."""
+from app.models.audio_task import AudioTask
 from app.models.book import Book
 from app.models.chunk import Chunk
-from app.models.highlight import Highlight
-from app.models.note import Note
 from app.models.project import Project
 from app.models.script import Script
 from app.models.user import User
@@ -15,6 +14,5 @@ __all__ = [
     "Script",
     "Chunk",
     "VoiceConfig",
-    "Highlight",
-    "Note",
+    "AudioTask",
 ]
